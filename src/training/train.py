@@ -155,6 +155,7 @@ def evaluate(model, data, epoch, args, tb_writer=None, steps=None):
     model.eval()
 
     zero_shot_metrics = zero_shot_eval(model, data, epoch, args)
+    #zero_shot_metrics = 
 
     dataloader = data['val'].dataloader
 

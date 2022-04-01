@@ -17,7 +17,7 @@ from typing import Union
 from dataclasses import dataclass
 
 import torch
-from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
+from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler, Subset
 from torch.utils.data.distributed import DistributedSampler
 import torchvision.datasets as datasets
 from webdataset.utils import identity
@@ -81,7 +81,7 @@ def get_imagenet(args, preprocess_fns, split):
             preprocess_fn = preprocess_val
         assert data_path
 
-        dataset = datasets.ImageFolder(data_path, transform=preprocess_fn)
+        dataset = Subset(datasets.ImageFolder(data_path, transform=preprocess_fn), range(10000))
 
     if is_train:
         idxs = np.zeros(len(dataset.targets))
@@ -89,7 +89,7 @@ def get_imagenet(args, preprocess_fns, split):
         k = 50
         for c in range(1000):
             m = target_array == c
-            n = len(idxs[m])
+            n = len(idxs[m])    
             arr = np.zeros(n)
             arr[:k] = 1
             np.random.shuffle(arr)
