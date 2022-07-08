@@ -203,7 +203,16 @@ class LayerNorm(nn.LayerNorm):
         # if torch.backends.mps.is_available():
         #     x = F.group_norm(x, 4, self.weight, self.bias)
         #     return x.to(orig_type)
+
+            # x = x.to(device=torch.device('cpu'))
+            # self.weight = self.weight.to(device=torch.device('cpu'))
+            # self.bias = self.bias.to(device=torch.device('cpu'))
         x = F.layer_norm(x, self.normalized_shape, self.weight, self.bias)
+        # if torch.backends.mps.is_available():
+        #     x = x.to(device=torch.device('mps'))
+        #     self.weight = self.weight.to(device=torch.device('mps'))
+        #     self.bias = self.bias.to(device=torch.device('mps'))
+        
         return x.to(orig_type)
 
 

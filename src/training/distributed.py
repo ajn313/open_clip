@@ -108,6 +108,7 @@ def init_distributed_device(args):
         torch.cuda.set_device(device)
     # elif torch.backends.mps.is_available():
     #     device = torch.device("mps")
+    #     torch.backends.cudnn.enabled=False
     else:
         device = 'cpu'
     args.device = device
