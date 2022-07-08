@@ -91,14 +91,23 @@ def run(model, classifier, dataloader, args):
 
 
 def zero_shot_eval(model, data, epoch, args):
-    print(data)
+    logging.debug(data)
+    
+    results = {}
+    classifier = None
+
+    if 'imagenet-val' not in data and 'imagenet-v2' not in data and 'imagenet-r' not in data and 'imagenet-s' not in data and 'imagenet-a' not in data and 'inat2021' not in data and 'stanfordcars' not in data and 'flowers' not in data:
+        return results
+    if args.zeroshot_frequency == 0:
+        return results
+    if (epoch % args.zeroshot_frequency) != 0 and epoch != args.epochs:
+        return results
     if 'inat2021' in data:
         logging.info("Starting zero-shot inat2021.")
         logging.info('Building zero-shot classifier')
         classifier = zero_shot_classifier(model, inat_classnames, inat_template, args)
 
         logging.info('Using classifier')
-        results = {}
         top1, top5 = run(model, classifier, data['inat2021'].dataloader, args)
         results['inat2021-top1'] = top1
         results['inat2021-top5'] = top5
@@ -111,7 +120,6 @@ def zero_shot_eval(model, data, epoch, args):
         classifier = zero_shot_classifier(model, cars_classnames, cars_template, args)
 
         logging.info('Using classifier')
-        results = {}
         top1, top5 = run(model, classifier, data['stanfordcars'].dataloader, args)
         results['stanfordcars-top1'] = top1
         results['stanfordcars-top5'] = top5
@@ -124,40 +132,32 @@ def zero_shot_eval(model, data, epoch, args):
         classifier = zero_shot_classifier(model, flowers_classnames, flowers_template, args)
 
         logging.info('Using classifier')
-        results = {}
         top1, top5 = run(model, classifier, data['flowers'].dataloader, args)
         results['flowers-top1'] = top1
         results['flowers-top5'] = top5
 
         logging.info('Finished zero-shot flowers. Top1 was {}, top5 was {}'.format(top1, top5))
 
-    if 'imagenet-val' not in data and 'imagenet-v2' not in data and 'imagenet-r' not in data and 'imagenet-s' not in data and 'imagenet-a' not in data:
-        return {}
-    if args.zeroshot_frequency == 0:
-        return {}
-    if (epoch % args.zeroshot_frequency) != 0 and epoch != args.epochs:
-        return {}
-
     logging.info('Starting zero-shot imagenet.')
 
     classifier = None
-    results = {}
+    
     if 'imagenet-val' in data:
-        if not classifier:
+        if type(classifier) is None:
             logging.info('Building zero-shot classifier')
             classifier = zero_shot_classifier(model, imagenet_classnames, openai_imagenet_template, args)
         top1, top5 = run(model, classifier, data['imagenet-val'].dataloader, args)
         results['imagenet-zeroshot-val-top1'] = top1
         results['imagenet-zeroshot-val-top5'] = top5
     if 'imagenet-v2' in data:
-        if not classifier:
+        if type(classifier) is None:
             logging.info('Building zero-shot classifier')
             classifier = zero_shot_classifier(model, imagenet_classnames, openai_imagenet_template, args)
         top1, top5 = run(model, classifier, data['imagenet-v2'].dataloader, args)
         results['imagenetv2-zeroshot-val-top1'] = top1
         results['imagenetv2-zeroshot-val-top5'] = top5
     if 'imagenet-s' in data:
-        if not classifier:
+        if type(classifier) is None:
             logging.info('Building zero-shot classifier')
             classifier = zero_shot_classifier(model, imagenet_classnames, openai_imagenet_template, args)
         top1, top5 = run(model, classifier, data['imagenet-s'].dataloader, args)
