@@ -149,6 +149,7 @@ def zero_shot_eval(model, data, epoch, args):
         top1, top5 = run(model, classifier, data['imagenet-val'].dataloader, args)
         results['imagenet-zeroshot-val-top1'] = top1
         results['imagenet-zeroshot-val-top5'] = top5
+        logging.info('Finished zero-shot val. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-v2' in data:
         if classifier is None:
             logging.info('Building zero-shot classifier')
@@ -156,6 +157,7 @@ def zero_shot_eval(model, data, epoch, args):
         top1, top5 = run(model, classifier, data['imagenet-v2'].dataloader, args)
         results['imagenetv2-zeroshot-val-top1'] = top1
         results['imagenetv2-zeroshot-val-top5'] = top5
+        logging.info('Finished zero-shot v2. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-s' in data:
         if classifier is None:
             logging.info('Building zero-shot classifier')
@@ -163,17 +165,20 @@ def zero_shot_eval(model, data, epoch, args):
         top1, top5 = run(model, classifier, data['imagenet-s'].dataloader, args)
         results['imagenets-zeroshot-val-top1'] = top1
         results['imagenets-zeroshot-val-top5'] = top5
+        logging.info('Finished zero-shot sketch. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-r' in data:
         classifier_r = zero_shot_classifier(model, imagenet_r_classnames, openai_imagenet_template, args)
         top1, top5 = run(model, classifier_r, data['imagenet-r'].dataloader, args)
         results['imagenetr-zeroshot-val-top1'] = top1
         results['imagenetr-zeroshot-val-top5'] = top5
+        logging.info('Finished zero-shot imagenet-r. Top1 was {}, top5 was {}'.format(top1, top5))
     if 'imagenet-a' in data:
         classifier_a = zero_shot_classifier(model, imagenet_a_classnames, openai_imagenet_template, args)
         top1, top5 = run(model, classifier_a, data['imagenet-a'].dataloader, args)
         results['imageneta-zeroshot-val-top1'] = top1
         results['imageneta-zeroshot-val-top5'] = top5
+        logging.info('Finished zero-shot imagenet-a. Top1 was {}, top5 was {}'.format(top1, top5))
 
-    logging.info('Finished zero-shot imagenet.')
+    logging.info('Finished zero-shot evals')
 
     return results
