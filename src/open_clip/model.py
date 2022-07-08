@@ -194,25 +194,9 @@ class ModifiedResNet(nn.Module):
 
 class LayerNorm(nn.LayerNorm):
     """Subclass torch's LayerNorm to handle fp16."""
-
     def forward(self, x: torch.Tensor):
         orig_type = x.dtype
-        # if torch.backends.mps.is_available():
-        #     return F.layer_norm(x.to(orig_type), self.normalized_shape, self.weight, self.bias)
-        # print(x.size(), self.normalized_shape, self.weight.size(), self.bias.size())
-        # if torch.backends.mps.is_available():
-        #     x = F.group_norm(x, 4, self.weight, self.bias)
-        #     return x.to(orig_type)
-
-            # x = x.to(device=torch.device('cpu'))
-            # self.weight = self.weight.to(device=torch.device('cpu'))
-            # self.bias = self.bias.to(device=torch.device('cpu'))
         x = F.layer_norm(x, self.normalized_shape, self.weight, self.bias)
-        # if torch.backends.mps.is_available():
-        #     x = x.to(device=torch.device('mps'))
-        #     self.weight = self.weight.to(device=torch.device('mps'))
-        #     self.bias = self.bias.to(device=torch.device('mps'))
-        
         return x.to(orig_type)
 
 
@@ -404,7 +388,8 @@ class CLIP(nn.Module):
         self.vocab_size = text_cfg.vocab_size
         self.token_embedding = nn.Embedding(text_cfg.vocab_size, text_cfg.width)
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, text_cfg.width))
-        self.ln_final = LayerNorm(text_cfg.width)
+        else:
+            self.ln_final = LayerNorm(text_cfg.width)
 
         self.text_projection = nn.Parameter(torch.empty(text_cfg.width, embed_dim))
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
