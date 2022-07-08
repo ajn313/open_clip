@@ -79,16 +79,52 @@ def parse_args():
         help="Path to imagenet v2 for conducting zero shot evaluation.",
     )
     parser.add_argument(
+        "--imagenet-s",
+        type=str,
+        default=None,
+        help="Path to imagenet sketch set for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
+        "--imagenet-r",
+        type=str,
+        default=None,
+        help="Path to imagenet-r set for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
+        "--imagenet-a",
+        type=str,
+        default=None,
+        help="Path to imagenet-a set for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
         "--inat2021",
         type=str,
         default=None,
         help="Path to inat 2021 (validation or test folder) for conducting zero shot evaluation.",
     )
     parser.add_argument(
+        "--inat2018",
+        type=str,
+        default=None,
+        help="Path to inat 2018 (validation or test folder) for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
+        "--inat2017",
+        type=str,
+        default=None,
+        help="Path to inat 2017 (validation or test folder) for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
         "--stanfordcars",
         type=str,
         default=None,
         help="Path to stanford cars (validation or test folder) for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
+        "--flowers",
+        type=str,
+        default=None,
+        help="Path to flowers102 (validation or test folder) for conducting zero shot evaluation.",
     )
     parser.add_argument(
         "--logs",

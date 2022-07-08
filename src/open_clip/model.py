@@ -197,7 +197,13 @@ class LayerNorm(nn.LayerNorm):
 
     def forward(self, x: torch.Tensor):
         orig_type = x.dtype
-        x = F.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
+        # if torch.backends.mps.is_available():
+        #     return F.layer_norm(x.to(orig_type), self.normalized_shape, self.weight, self.bias)
+        # print(x.size(), self.normalized_shape, self.weight.size(), self.bias.size())
+        # if torch.backends.mps.is_available():
+        #     x = F.group_norm(x, 4, self.weight, self.bias)
+        #     return x.to(orig_type)
+        x = F.layer_norm(x, self.normalized_shape, self.weight, self.bias)
         return x.to(orig_type)
 
 

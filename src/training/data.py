@@ -106,24 +106,29 @@ def get_dataset_size(shards):
 
 
 def get_imagenet(args, preprocess_fns, split):
-    assert split in ["train", "val", "v2"]
+    assert split in ["train", "val", "v2", "r", "a", "s"]
     is_train = (split == "train")
     preprocess_train, preprocess_val = preprocess_fns
 
     if split == "v2":
         from imagenetv2_pytorch import ImageNetV2Dataset
         dataset = ImageNetV2Dataset(location=args.imagenet_v2, transform=preprocess_val)
+    elif is_train:
+        data_path = args.imagenet_train
+        preprocess_fn = preprocess_train
     else:
-        if is_train:
-            data_path = args.imagenet_train
-            preprocess_fn = preprocess_train
-        else:
+        if split == "val":
             data_path = args.imagenet_val
-            preprocess_fn = preprocess_val
+        if split == "r":
+            data_path = args.imagenet_r
+        if split == "a":
+            data_path = args.imagenet_a
+        if split == "s":
+            data_path = args.imagenet_s
+        preprocess_fn = preprocess_val
         assert data_path
 
         dataset = datasets.ImageFolder(data_path, transform=preprocess_fn)
-
     if is_train:
         idxs = np.zeros(len(dataset.targets))
         target_array = np.array(dataset.targets)
@@ -150,32 +155,20 @@ def get_imagenet(args, preprocess_fns, split):
 
     return DataInfo(dataloader=dataloader, sampler=sampler)
 
-def get_inat(args, preprocess_fns, split):
-    assert split in ["2017", "2018", "2019", "2021"]
-    preprocess_train, preprocess_val = preprocess_fns
-
-    if split == "2021":
-        data_path = args.inat2021
-        preprocess_fn = preprocess_val
-        dataset = datasets.ImageFolder(data_path, transform=preprocess_fn)
-        sampler = None
-        dataloader = torch.utils.data.DataLoader(
-        dataset,
-            batch_size=args.batch_size,
-            num_workers=args.workers,
-            sampler=sampler,
-        )
-    else:
-        print("{} not implemented".format(split))
-
-    return DataInfo(dataloader, sampler)
-
-def get_stanfordcars(args, preprocess_fns):
-    preprocess_train, preprocess_val = preprocess_fns
-
+def get_torchvision(args, preprocess_fns, ds):
+    _, preprocess_val = preprocess_fns
     data_path = args.stanfordcars
     preprocess_fn = preprocess_val
-    dataset = datasets.StanfordCars(root: str = data_path, split: str = 'test', transform: Optional[Callable] = preprocess_fn, target_transform: Optional[Callable] = None, download: bool = True)
+    if ds == "stanfordcars":
+        dataset = datasets.StanfordCars(root = data_path, split = 'test', transform = preprocess_fn, download = True)
+    elif ds == "flowers102":
+        dataset = datasets.Flowers102(root = data_path, split = 'test', transform = preprocess_fn, download = True)
+    elif ds == "inat2021":
+        dataset = datasets.INaturalist(root = data_path, version = "2021_valid", transform = preprocess_fn, download = True)
+    elif ds == "inat2018":
+        dataset = datasets.INaturalist(root = data_path, version = "2018", transform = preprocess_fn, download = True)
+    elif ds == "inat2017":
+        dataset = datasets.INaturalist(root = data_path, version = "2017", transform = preprocess_fn, download = True)
     sampler = None
     dataloader = torch.utils.data.DataLoader(
     dataset,
@@ -511,10 +504,22 @@ def get_data(args, preprocess_fns, epoch=0):
     if args.imagenet_v2 is not None:
         data["imagenet-v2"] = get_imagenet(args, preprocess_fns, "v2")
 
+    if args.imagenet_r is not None:
+        data["imagenet-r"] = get_imagenet(args, preprocess_fns, "r")    
+    
+    if args.imagenet_s is not None:
+        data["imagenet-s"] = get_imagenet(args, preprocess_fns, "s")   
+    
+    if args.imagenet_a is not None:
+        data["imagenet-a"] = get_imagenet(args, preprocess_fns, "a")   
+
     if args.inat2021 is not None:
-        data["inat2021"] = get_inat(args, preprocess_fns, "2021")
+        data["inat2021"] = get_torchvision(args, preprocess_fns, "inat2021")
 
     if args.stanfordcars is not None:
-        data["stanfordcars"] = get_stanfordcars(args, preprocess_fns)
+        data["stanfordcars"] = get_torchvision(args, preprocess_fns, "stanfordcars")
+    
+    if args.flowers is not None:
+        data["flowers"] = get_torchvision(args, preprocess_fns, "flowers")
 
     return data

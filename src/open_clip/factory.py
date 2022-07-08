@@ -106,7 +106,7 @@ def create_model(
         mlm: bool = False
 ):
     if model_name == "xclip" or any([filip, mlm, vssl, elp, dcl]):
-        enc = timm.create_model(model_name, pretrained=True).cuda() if pretrained_image else None
+        enc = timm.create_model(model_name, pretrained=True).to(device=device) if pretrained_image else None
         if enc:
             enc = nn.Sequential(*list(enc.children())[:-1])
         model = XCLIP(
@@ -156,7 +156,7 @@ def create_model(
         model.to(device=device)
         return model
     if model_name == "coca":
-        enc = timm.create_model('vit_large_patch32_224_in21k', pretrained=True).cuda()
+        enc = timm.create_model('vit_large_patch32_224_in21k', pretrained=True).to(device=device)
         enc = nn.Sequential(*list(enc.children())[:-1])
         model = CoCa(
             dim = 512,                     # model dimension

@@ -6,10 +6,12 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 from open_clip import tokenize
-from .imagenet_zeroshot_data import imagenet_classnames, openai_imagenet_template
+from .imagenet_zeroshot_data import imagenet_classnames, imagenet_r_classnames, imagenet_a_classnames, openai_imagenet_template
 try:
     from .inat_zeroshot_data import inat_classnames, inat_template
     from .cars_zeroshot_data import cars_classnames, cars_template
+    from .flowers_zeroshot_data import flowers_classnames, flowers_template
+
 except Exception as e:
     print(e)
 
@@ -89,7 +91,7 @@ def run(model, classifier, dataloader, args):
 
 
 def zero_shot_eval(model, data, epoch, args):
-
+    print(data)
     if 'inat2021' in data:
         logging.info("Starting zero-shot inat2021.")
         logging.info('Building zero-shot classifier')
@@ -116,7 +118,20 @@ def zero_shot_eval(model, data, epoch, args):
 
         logging.info('Finished zero-shot stanfordcars. Top1 was {}, top5 was {}'.format(top1, top5))
 
-    if 'imagenet-val' not in data and 'imagenet-v2' not in data:
+    if 'flowers' in data:
+        logging.info("Starting zero-shot flowers.")
+        logging.info('Building zero-shot classifier')
+        classifier = zero_shot_classifier(model, flowers_classnames, flowers_template, args)
+
+        logging.info('Using classifier')
+        results = {}
+        top1, top5 = run(model, classifier, data['flowers'].dataloader, args)
+        results['flowers-top1'] = top1
+        results['flowers-top5'] = top5
+
+        logging.info('Finished zero-shot flowers. Top1 was {}, top5 was {}'.format(top1, top5))
+
+    if 'imagenet-val' not in data and 'imagenet-v2' not in data and 'imagenet-r' not in data and 'imagenet-s' not in data and 'imagenet-a' not in data:
         return {}
     if args.zeroshot_frequency == 0:
         return {}
@@ -125,19 +140,39 @@ def zero_shot_eval(model, data, epoch, args):
 
     logging.info('Starting zero-shot imagenet.')
 
-    logging.info('Building zero-shot classifier')
-    classifier = zero_shot_classifier(model, imagenet_classnames, openai_imagenet_template, args)
-
-    logging.info('Using classifier')
+    classifier = None
     results = {}
     if 'imagenet-val' in data:
+        if not classifier:
+            logging.info('Building zero-shot classifier')
+            classifier = zero_shot_classifier(model, imagenet_classnames, openai_imagenet_template, args)
         top1, top5 = run(model, classifier, data['imagenet-val'].dataloader, args)
         results['imagenet-zeroshot-val-top1'] = top1
         results['imagenet-zeroshot-val-top5'] = top5
     if 'imagenet-v2' in data:
+        if not classifier:
+            logging.info('Building zero-shot classifier')
+            classifier = zero_shot_classifier(model, imagenet_classnames, openai_imagenet_template, args)
         top1, top5 = run(model, classifier, data['imagenet-v2'].dataloader, args)
         results['imagenetv2-zeroshot-val-top1'] = top1
         results['imagenetv2-zeroshot-val-top5'] = top5
+    if 'imagenet-s' in data:
+        if not classifier:
+            logging.info('Building zero-shot classifier')
+            classifier = zero_shot_classifier(model, imagenet_classnames, openai_imagenet_template, args)
+        top1, top5 = run(model, classifier, data['imagenet-s'].dataloader, args)
+        results['imagenets-zeroshot-val-top1'] = top1
+        results['imagenets-zeroshot-val-top5'] = top5
+    if 'imagenet-r' in data:
+        classifier_r = zero_shot_classifier(model, imagenet_r_classnames, openai_imagenet_template, args)
+        top1, top5 = run(model, classifier_r, data['imagenet-r'].dataloader, args)
+        results['imagenetr-zeroshot-val-top1'] = top1
+        results['imagenetr-zeroshot-val-top5'] = top5
+    if 'imagenet-a' in data:
+        classifier_a = zero_shot_classifier(model, imagenet_a_classnames, openai_imagenet_template, args)
+        top1, top5 = run(model, classifier_a, data['imagenet-a'].dataloader, args)
+        results['imageneta-zeroshot-val-top1'] = top1
+        results['imageneta-zeroshot-val-top5'] = top5
 
     logging.info('Finished zero-shot imagenet.')
 

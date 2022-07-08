@@ -1,9 +1,9 @@
 import ast
 
-with open( r'./metadata/stanfordcars.txt', 'r' ) as file:
-    cars_classnames = ast.literal_eval(file.read())
+with open( r'./metadata/flowers.txt', 'r' ) as file:
+    flowers_classnames = ast.literal_eval(file.read())
 
-cars_template = [
+flowers_template = [
     lambda c: f'a bad photo of a {c}.',
     lambda c: f'a photo of many {c}.',
     lambda c: f'a sculpture of a {c}.',

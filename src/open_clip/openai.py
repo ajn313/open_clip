@@ -43,6 +43,9 @@ def load_openai_model(
     preprocess : Callable[[PIL.Image], torch.Tensor]
         A torchvision transform that converts a PIL image into a tensor that the returned model can take as its input
     """
+    # if torch.backends.mps.is_available():
+    #     device = torch.device("mps")
+    #     torch.backends.cudnn.enabled=False
     if get_pretrained_url(name, 'openai'):
         model_path = download_pretrained(get_pretrained_url(name, 'openai'))
     elif os.path.isfile(name):
