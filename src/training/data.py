@@ -157,17 +157,21 @@ def get_imagenet(args, preprocess_fns, split):
 
 def get_torchvision(args, preprocess_fns, ds):
     _, preprocess_val = preprocess_fns
-    data_path = args.stanfordcars
     preprocess_fn = preprocess_val
     if ds == "stanfordcars":
+        data_path = args.stanfordcars
         dataset = datasets.StanfordCars(root = data_path, split = 'test', transform = preprocess_fn, download = True)
     elif ds == "flowers102":
+        data_path = args.flowers
         dataset = datasets.Flowers102(root = data_path, split = 'test', transform = preprocess_fn, download = True)
     elif ds == "inat2021":
+        data_path = args.inat2021
         dataset = datasets.INaturalist(root = data_path, version = "2021_valid", transform = preprocess_fn, download = True)
     elif ds == "inat2018":
+        data_path = args.inat2018
         dataset = datasets.INaturalist(root = data_path, version = "2018", transform = preprocess_fn, download = True)
     elif ds == "inat2017":
+        data_path = args.inat2017
         dataset = datasets.INaturalist(root = data_path, version = "2017", transform = preprocess_fn, download = True)
     sampler = None
     dataloader = torch.utils.data.DataLoader(
