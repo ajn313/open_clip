@@ -3,7 +3,7 @@ wandb/
 models/
 features/
 results/
-cmd.txt
+yfcc-subsets/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -153,3 +153,5 @@ core.*
 # Allow
 !src/evaluation/misc/results_dbs/*
 src/training/temp
+cmd.txt
+batch/interactive_debug_commands.txt

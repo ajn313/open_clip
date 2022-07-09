@@ -1,5 +1,6 @@
 #!/bin/bash -x
-#SBATCH --output=logs/SLURM/out_%A_%j.log
+
+#SBATCH --output=litswin_%j.log
 #SBATCH --nodes=4
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=4
@@ -30,4 +31,4 @@ echo "MASTER_ADDR="$MASTER_ADDR
 srun --cpu_bind=v --accel-bind=v \
     /bin/bash src/script/run-singularity.bash \
     /bin/bash -c \
-    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --save-frequency 1 --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..41400}.tar" --train-num-samples 400000000 --imagenet-val "/imagenet/val/" --zeroshot-frequency=1 --warmup 2000 --batch-size=256 --wd=0.1 --epochs=32 --workers=4 --model=timm-swin_base_patch4_window7_224 --pretrained-image --lock-image --seed 0 --resume "/scratch/bf996/open_clip/logs/swin-ep5/checkpoints/epoch_5.pt" --local-loss --gather-with-grad'
+    'export PYTHONPATH="$PYTHONPATH:$PWD/src"; python src/training/main.py --save-frequency 1 --report-to wandb --dataset-type webdataset --train-data "/vast/work/public/ml-datasets/laion400m/{00000..41400}.tar" --train-num-samples 400000000 --imagenet-val "/imagenet/val/" --zeroshot-frequency=1 --warmup 2000 --batch-size=256 --wd=0.1 --epochs=32 --workers=4 --model=timm-swin_base_patch4_window7_224 --pretrained-image --lock-image --seed 0 --resume "/scratch/bf996/open_clip/logs/2022_07_07-11_22_26-model_timm-swin_base_patch4_window7_224-lr_0.0005-b_256-j_4-p_amp/checkpoints/epoch_6.pt" --local-loss --gather-with-grad'
