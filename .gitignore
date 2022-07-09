@@ -154,3 +154,4 @@ core.*
 # Allow
 !src/evaluation/misc/results_dbs/*
 src/training/temp
+batch/interactive_debug_commands.txt

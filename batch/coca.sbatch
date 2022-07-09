@@ -1,5 +1,6 @@
 #!/bin/bash -x
-#SBATCH --output=logs/SLURM/out_%A_%j.log
+
+#SBATCH --output=coca_%j.log
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=2
 #SBATCH --cpus-per-task=4
