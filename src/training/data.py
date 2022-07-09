@@ -161,7 +161,7 @@ def get_torchvision(args, preprocess_fns, ds):
     if ds == "stanfordcars":
         data_path = args.stanfordcars
         dataset = datasets.StanfordCars(root = data_path, split = 'test', transform = preprocess_fn, download = True)
-    elif ds == "flowers102":
+    elif ds == "flowers":
         data_path = args.flowers
         dataset = datasets.Flowers102(root = data_path, split = 'test', transform = preprocess_fn, download = True)
     elif ds == "inat2021":
