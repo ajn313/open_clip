@@ -13,4 +13,5 @@ tensorboard
 timm
 wandb
 scipy
+nltk
 git+https://github.com/modestyachts/ImageNetV2_pytorch

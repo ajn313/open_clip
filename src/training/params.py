@@ -61,6 +61,24 @@ def parse_args():
         help="For csv-like datasets, the name of the key for the image paths."
     )
     parser.add_argument(
+        "--csv-filter",
+        type=str,
+        default="",
+        help="Filter captions to only include those which match the filter contents: options are ['imagenet_classnames', 'inat_classnames', 'cars_classnames', 'flowers_classnames', 'food_classnames', 'air_classnames']."
+    )
+    parser.add_argument(
+        "--csv-scrambled",
+        type=bool,
+        default=False,
+        help="Filter captions to only include those which match the filter contents (a list)."
+    )
+    parser.add_argument(
+        "--csv-cleaned",
+        type=bool,
+        default=False,
+        help="Clean captions"
+    )
+    parser.add_argument(
         "--csv-caption-key",
         type=str,
         default="title",
@@ -127,6 +145,18 @@ def parse_args():
         help="Path to flowers102 (validation or test folder) for conducting zero shot evaluation.",
     )
     parser.add_argument(
+        "--air",
+        type=str,
+        default=None,
+        help="Path to FGVCAircraft (validation or test folder) for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
+        "--food",
+        type=str,
+        default=None,
+        help="Path to food101 (validation or test folder) for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
         "--logs",
         type=str,
         default="./logs/",
@@ -183,6 +213,9 @@ def parse_args():
     )
     parser.add_argument(
         "--zeroshot-frequency", type=int, default=2, help="How often to run zero shot."
+    )
+    parser.add_argument(
+        "--zeroshot-scramble", type=bool, default=False, help="Scramble text ordering for zero-shot inference."
     )
     parser.add_argument(
         "--val-frequency", type=int, default=1, help="How often to run evaluation with val data."

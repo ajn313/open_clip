@@ -17,9 +17,9 @@ singularity exec --nv \
     $(for sqf in /vast/work/public/ml-datasets/yfcc15m/data/*.sqf; do echo "--overlay $sqf:ro"; done) \
 	--overlay /scratch/bf996/singularity_containers/openclip_env_cuda.ext3:ro \
 	/scratch/work/public/singularity/cuda11.4.2-cudnn8.2.4-devel-ubuntu20.04.3.sif \
-	/bin/bash -c 'source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:$PWD/open_clip/src";\
-    python -u open_clip/src/training/main.py \
-    --train-data="$PWD/datasets/yfcc15m/yfcc-small-metadata.csv" \
+	/bin/bash -c 'source /ext3/env.sh; export PYTHONPATH="$PYTHONPATH:$PWD/src";\
+    python -u src/training/main.py \
+    --train-data="yfcc-subsets/yfcc_cars.csv" \
     --csv-separator "," \
     --save-frequency 1 \
     --report-to tensorboard \
@@ -27,6 +27,6 @@ singularity exec --nv \
     --batch-size=256 \
     --lr=1e-3 \
     --wd=0.1 \
-    --epochs=2 \
+    --epochs=32 \
     --workers=8 \
     --model=RN50'

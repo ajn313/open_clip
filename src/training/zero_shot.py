@@ -1,4 +1,5 @@
 import logging
+import random
 from contextlib import suppress
 
 import torch
@@ -11,6 +12,8 @@ try:
     from .inat_zeroshot_data import inat_classnames, inat_template
     from .cars_zeroshot_data import cars_classnames, cars_template
     from .flowers_zeroshot_data import flowers_classnames, flowers_template
+    from .food_zeroshot_data import food_classnames, food_template
+    from .air_zeroshot_data import air_classnames, air_template
 
 except Exception as e:
     print(e)
@@ -21,6 +24,12 @@ def zero_shot_classifier(model, classnames, templates, args):
         zeroshot_weights = []
         for classname in tqdm(classnames):
             texts = [template(classname) for template in templates]  # format with class
+            if args.zeroshot_scramble:
+                res = []
+                tlist = [t.split(" ") for t in texts]
+                for l in tlist:
+                    random.shuffle(l)
+                    res.append(" ".join(l).strip())
             texts = tokenize(texts).to(args.device)  # tokenize
             if args.distributed and not args.horovod:
                 if args.model in ["coca", "xclip"]:
@@ -96,7 +105,7 @@ def zero_shot_eval(model, data, epoch, args):
     results = {}
     classifier = None
 
-    if 'imagenet-val' not in data and 'imagenet-v2' not in data and 'imagenet-r' not in data and 'imagenet-s' not in data and 'imagenet-a' not in data and 'inat2021' not in data and 'stanfordcars' not in data and 'flowers' not in data:
+    if 'imagenet-val' not in data and 'imagenet-v2' not in data and 'imagenet-r' not in data and 'imagenet-s' not in data and 'imagenet-a' not in data and 'inat2021' not in data and 'stanfordcars' not in data and 'flowers' not in data and 'food' not in data:
         return results
     if args.zeroshot_frequency == 0:
         return results
@@ -138,6 +147,30 @@ def zero_shot_eval(model, data, epoch, args):
 
         logging.info('Finished zero-shot flowers. Top1 was {}, top5 was {}'.format(top1, top5))
 
+    if 'air' in data:
+        logging.info("Starting zero-shot FGVC-aircraft.")
+        logging.info('Building zero-shot classifier')
+        classifier = zero_shot_classifier(model, air_classnames, air_template, args)
+
+        logging.info('Using classifier')
+        top1, top5 = run(model, classifier, data['air'].dataloader, args)
+        results['FGVC-aircraft-top1'] = top1
+        results['FGVC-aircraft-top5'] = top5
+
+        logging.info('Finished zero-shot FGVC-aircraft. Top1 was {}, top5 was {}'.format(top1, top5))
+
+    if 'food' in data:
+            logging.info("Starting zero-shot food.")
+            logging.info('Building zero-shot classifier')
+            classifier = zero_shot_classifier(model, food_classnames, food_template, args)
+
+            logging.info('Using classifier')
+            top1, top5 = run(model, classifier, data['food'].dataloader, args)
+            results['food-top1'] = top1
+            results['food-top5'] = top5
+
+            logging.info('Finished zero-shot food. Top1 was {}, top5 was {}'.format(top1, top5))
+            
     logging.info('Starting zero-shot imagenet.')
 
     classifier = None

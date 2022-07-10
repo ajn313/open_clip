@@ -14,7 +14,7 @@ try:
 except ImportError:
     wandb = None
 
-from open_clip import ClipLoss
+from open_clip import ClipLoss, tokenize
 from .distributed import is_master
 from .zero_shot import zero_shot_eval
 
@@ -93,15 +93,27 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
             )
 
     for i, batch in enumerate(dataloader):
+        # logging.info("batch contents: ")
+        # logging.info(batch[1])
         step = num_batches_per_epoch * epoch + i
         scheduler(step)
-
         images, texts = batch
         texts = texts.to(device=device, non_blocking=True)
         images = images.to(device=device, non_blocking=True)
+        if args.csv_filter != "":
+            skiptoken = tokenize(["NONE"])[0].to(device=device, non_blocking=True)
+            # print(texts.size(), len(texts))
+            for j, t in enumerate(texts):
+                if torch.equal(t, skiptoken):
+                    images = torch.cat([images[0:j], images[j+1:]])
+                    texts = torch.cat([texts[0:j], texts[j+1:]])
+
+            print("batch length: {}".format(len(images)))
+            if len(images) < 2:
+                logging.debug("skipping short batch")
+                continue
         data_time_m.update(time.time() - end)
         optimizer.zero_grad()
-
         with autocast():
             if args.gc:
                 if args.model in ["coca", "xclip"]:

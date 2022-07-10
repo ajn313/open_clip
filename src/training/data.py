@@ -8,6 +8,7 @@ import sys
 import time
 from dataclasses import dataclass
 from multiprocessing import Value
+from functools import partial
 
 import braceexpand
 import numpy as np
@@ -26,15 +27,42 @@ try:
 except ImportError:
     hvd = None
 
+try:
+    import nltk
+    nltk.download('stopwords')
+    nltk.download('wordnet')
+    nltk.download('omw-1.4')
+    nltk.download('punkt')
+    nltk.download('averaged_perceptron_tagger')
+    nltk.download('tagsets')
+    # regex_tokenizer = nltk.tokenize.RegexpTokenizer(r'\w+')
+    lemmatizer = nltk.stem.WordNetLemmatizer()
+
+except:
+    print("nltk load failed, filtering not available")
+
 from open_clip import tokenize
 
+from .imagenet_zeroshot_data import imagenet_classnames, imagenet_r_classnames, imagenet_a_classnames, openai_imagenet_template
+try:
+    from .inat_zeroshot_data import inat_classnames, inat_template
+    from .cars_zeroshot_data import cars_classnames, cars_template
+    from .flowers_zeroshot_data import flowers_classnames, flowers_template
+    from .food_zeroshot_data import food_classnames, food_template
+    from .air_zeroshot_data import air_classnames, air_template
+except Exception as e:
+    print(e)
+
 class CsvDataset(Dataset):
-    def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t"):
+    def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, sep="\t"):
         logging.debug(f'Loading csv data from {input_filename}')
         df = pd.read_csv(input_filename, sep=sep)
         self.images = df[img_key].tolist()
         self.captions = df[caption_key].tolist()
         self.transforms = transforms
+        self.filter = csvfilter
+        self.scrambled = csvscrambled
+        self.cleaned = csvcleaned
         logging.debug('Done loading data')
 
     def __len__(self):
@@ -43,8 +71,18 @@ class CsvDataset(Dataset):
     def __getitem__(self, idx):
         try:
             images = self.transforms(Image.open(str(self.images[idx])))
-            texts = tokenize([str(self.captions[idx])])[0]
-            logging.debug("texts is {}".format(texts))
+            if self.cleaned:
+                texts = clean_captions(str(self.captions[idx]))
+            else:
+                texts = str(self.captions[idx])
+            if self.filter != "":
+                if not synset_ds(texts, 3, self.filter):
+                    texts = "NONE"
+            if self.scrambled:
+                tlist = texts.split(" ")
+                random.shuffle(tlist)
+                texts = " ".join(tlist).strip()
+            texts = tokenize(texts)[0]
         except Exception as e:
             logging.debug("Missing or unreadable image at {}, generating dummy image and caption.".format(str(self.images[idx])))
             logging.debug("error message {}".format(e))
@@ -52,7 +90,7 @@ class CsvDataset(Dataset):
             images = self.transforms(
                 Image.fromarray(imarray.astype('uint8')).convert('RGBA')
                 )
-            texts = tokenize(["**dummy*image**"])[0]
+            texts = tokenize(["NONE"])[0]
         return images, texts
 
 class SharedEpoch:
@@ -82,6 +120,37 @@ class DataInfo:
 def preprocess_txt(text):
     return tokenize([str(text)])[0]
 
+"""
+Synset builder
+
+Dataset argument expects a list of class names as strings -- any dataset can be used
+Strict follows the methodology of Fang et al ... multiple matches -> no match
+nva uses parts of speech for all of wordnet, instead of matching on some list from a dataset
+"""
+
+def synset_ds(s, ngram=3, ds=None):
+    try:
+        s = [lemmatizer.lemmatize(t) for t in s.split(" ")]
+        for count, word in enumerate(s):
+            grams = []
+            for i in range(ngram):
+                if count + i - 1 > len(s):
+                    continue
+                grams.append(" ".join(w for w in s[count:count+i+1]))
+            for i, gram in enumerate(grams):
+                if gram in ds:
+                    return True
+        return False
+    except Exception as e:
+        print(e)
+        return []
+
+def clean_captions(x):
+    try:
+        return x.lower().translate({ord(i): None for i in '&@/:\'\©#)("'}).translate({ord(i): " " for i in '-_.,!?'}).replace(" www ", " ").replace(" com ", " ").replace(" photo ", " ").replace(" photos ", " ").replace(" flickr ", " ").replace(" camera ", " ").replace(" st ", " street ").replace(" de ", "")
+    except Exception as e:
+        print(e)
+        return tokenize("NONE")[0]
 
 def get_dataset_size(shards):
     shards_list = list(braceexpand.braceexpand(shards))
@@ -104,6 +173,15 @@ def get_dataset_size(shards):
     num_shards = len(shards_list)
     return total_size, num_shards
 
+def NoneHandler(batch, dataset):
+    len_batch = len(batch) # original batch length
+    batch = list(filter (lambda x:x is not None, batch)) # filter out all the Nones
+    if len_batch > len(batch): # source all the required samples from the original dataset at random
+        diff = len_batch - len(batch)
+        for i in range(diff):
+            batch.append(dataset[np.random.randint(0, len(dataset))])
+    # logging.debug("collate_fn returned batch: {}".format(batch))
+    return torch.utils.data.dataloader.default_collate(batch)
 
 def get_imagenet(args, preprocess_fns, split):
     assert split in ["train", "val", "v2", "r", "a", "s"]
@@ -150,7 +228,9 @@ def get_imagenet(args, preprocess_fns, split):
         dataset,
         batch_size=args.batch_size,
         num_workers=args.workers,
-        sampler=sampler,
+        sampler=sampler
+        #sampler=sampler,
+        #collate_fn=partial(NoneHandler, dataset=dataset)
     )
 
     return DataInfo(dataloader=dataloader, sampler=sampler)
@@ -164,6 +244,12 @@ def get_torchvision(args, preprocess_fns, ds):
     elif ds == "flowers":
         data_path = args.flowers
         dataset = datasets.Flowers102(root = data_path, split = 'test', transform = preprocess_fn, download = True)
+    elif ds == "air":
+        data_path = args.air
+        dataset = datasets.FGVCAircraft(root=data_path, split = 'val', annotation_level = 'family', transform = preprocess_fn, download = True)
+    elif ds == "food":
+        data_path = args.food
+        dataset = datasets.Food101(root = data_path, split = 'test', transform = preprocess_fn, download = True)
     elif ds == "inat2021":
         data_path = args.inat2021
         dataset = datasets.INaturalist(root = data_path, version = "2021_valid", transform = preprocess_fn, download = True)
@@ -178,7 +264,9 @@ def get_torchvision(args, preprocess_fns, ds):
     dataset,
         batch_size=args.batch_size,
         num_workers=args.workers,
-        sampler=sampler,
+        sampler=sampler
+        #sampler=sampler,
+        #collate_fn=partial(NoneHandler, dataset=dataset)
     )
 
     return DataInfo(dataloader, sampler)
@@ -430,7 +518,7 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False):
     return DataInfo(dataloader=dataloader, shared_epoch=shared_epoch)
 
 def my_collate(batch):
-    logging.debug("batch contents: {}".format(batch))
+    # logging.debug("batch contents: {}".format(batch))
     len_batch = len(batch) # original batch length
     # logging.debug("Before filter, batch length is {}".format(len_batch))
     batch = list(filter (lambda x:x is not None, batch)) # filter out all the Nones
@@ -444,11 +532,17 @@ def my_collate(batch):
 def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
+    if args.csv_filter != "":
+        var_names = globals()
+        args.csv_filter = var_names[args.csv_filter]
     dataset = CsvDataset(
         input_filename,
         preprocess_fn,
         img_key=args.csv_img_key,
         caption_key=args.csv_caption_key,
+        csvfilter=args.csv_filter,
+        csvscrambled=args.csv_scrambled,
+        csvcleaned=args.csv_cleaned,
         sep=args.csv_separator)
     num_samples = len(dataset)
     sampler = DistributedSampler(dataset) if args.distributed and is_train else None
@@ -475,7 +569,7 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
 def get_dataset_fn(data_path, dataset_type):
     if dataset_type == "webdataset":
         return get_wds_dataset
-    elif dataset_type == "csv":
+    elif dataset_type in ["csv"]:
         return get_csv_dataset
     elif dataset_type == "auto":
         ext = data_path.split('.')[-1]
@@ -525,5 +619,11 @@ def get_data(args, preprocess_fns, epoch=0):
     
     if args.flowers is not None:
         data["flowers"] = get_torchvision(args, preprocess_fns, "flowers")
+
+    if args.air is not None:
+        data["air"] = get_torchvision(args, preprocess_fns, "air")
+
+    if args.food is not None:
+        data["food"] = get_torchvision(args, preprocess_fns, "food")
 
     return data
