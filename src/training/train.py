@@ -108,7 +108,7 @@ def train_one_epoch(model, data, epoch, optimizer, scaler, scheduler, args, tb_w
                     images = torch.cat([images[0:j], images[j+1:]])
                     texts = torch.cat([texts[0:j], texts[j+1:]])
 
-            print("batch length: {}".format(len(images)))
+            logging.debug("batch length: {}".format(len(images)))
             if len(images) < 2:
                 logging.debug("skipping short batch")
                 continue
