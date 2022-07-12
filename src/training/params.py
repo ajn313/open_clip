@@ -61,16 +61,16 @@ def parse_args():
         help="For csv-like datasets, the name of the key for the image paths."
     )
     parser.add_argument(
-        "--csv-filter",
+        "--ds-filter",
         type=str,
         default="",
-        help="Filter captions to only include those which match the filter contents: options are ['imagenet_classnames', 'inat_classnames', 'cars_classnames', 'flowers_classnames', 'food_classnames', 'air_classnames']."
+        help="Filter to only include samples in the batch whose captions contain a word in the filter list: options are ['imagenet_classnames', 'inat_classnames', 'cars_classnames', 'flowers_classnames', 'food_classnames', 'air_classnames']."
     )
     parser.add_argument(
         "--csv-scrambled",
         type=bool,
         default=False,
-        help="Filter captions to only include those which match the filter contents (a list)."
+        help="Scramble word ordering of captions during training"
     )
     parser.add_argument(
         "--csv-cleaned",

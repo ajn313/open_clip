@@ -13,6 +13,8 @@ from functools import partial
 import braceexpand
 import numpy as np
 import pandas as pd
+from tqdm.auto import tqdm  # for notebooks
+tqdm.pandas()
 import torch
 import torchvision.datasets as datasets
 import webdataset as wds
@@ -57,12 +59,23 @@ class CsvDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, csvfilter, csvscrambled, csvcleaned, sep="\t"):
         logging.debug(f'Loading csv data from {input_filename}')
         df = pd.read_csv(input_filename, sep=sep)
+        if csvcleaned:
+            logging.debug("cleaning captions")
+            df.loc[:, caption_key] = df.title.progress_apply(clean_captions)
+            logging.debug("done cleaning captions")
+            logging.debug(df.head())
+        if csvfilter != "":
+            logging.debug('Filtering captions. Original dataset size is {}'.format(len(df)))
+            logging.debug("filtering captions")
+            df['is_synset'] = df[caption_key].progress_apply(synset_ds, ngram=3, ds=csvfilter)
+            logging.debug(df['is_synset'].head())
+            df = df[df['is_synset']].drop(columns=['is_synset'])
+            logging.debug("done cleaning captions, length is now {}".format(len(df)))
+            logging.debug(df.head())
         self.images = df[img_key].tolist()
         self.captions = df[caption_key].tolist()
         self.transforms = transforms
-        self.filter = csvfilter
         self.scrambled = csvscrambled
-        self.cleaned = csvcleaned
         logging.debug('Done loading data')
 
     def __len__(self):
@@ -71,13 +84,7 @@ class CsvDataset(Dataset):
     def __getitem__(self, idx):
         try:
             images = self.transforms(Image.open(str(self.images[idx])))
-            if self.cleaned:
-                texts = clean_captions(str(self.captions[idx]))
-            else:
-                texts = str(self.captions[idx])
-            if self.filter != "":
-                if not synset_ds(texts, 3, self.filter):
-                    texts = "NONE"
+            texts = str(self.captions[idx])
             if self.scrambled:
                 tlist = texts.split(" ")
                 random.shuffle(tlist)
@@ -118,7 +125,17 @@ class DataInfo:
 
 
 def preprocess_txt(text):
-    return tokenize([str(text)])[0]
+    text = str(text)
+    # if args.csv_cleaned:
+    #     text = clean_captions(text)
+    # if args.csv_scrambled:
+    #     tlist = text.split(" ")
+    #     random.shuffle(tlist)
+    #     text = " ".join(tlist).strip()
+    # if args.ds_filter != "":
+    #     if not synset_ds(texts, 3, args.ds_filter):
+    #         texts = "NONE"
+    return tokenize([text])[0]
 
 """
 Synset builder
@@ -150,7 +167,8 @@ def clean_captions(x):
         return x.lower().translate({ord(i): None for i in '&@/:\'\©#)("'}).translate({ord(i): " " for i in '-_.,!?'}).replace(" www ", " ").replace(" com ", " ").replace(" photo ", " ").replace(" photos ", " ").replace(" flickr ", " ").replace(" camera ", " ").replace(" st ", " street ").replace(" de ", "")
     except Exception as e:
         print(e)
-        return tokenize("NONE")[0]
+        return ""
+        # return tokenize("NONE")[0]
 
 def get_dataset_size(shards):
     shards_list = list(braceexpand.braceexpand(shards))
@@ -471,7 +489,6 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False):
         wds.to_tuple("image", "text"),
         wds.batched(args.batch_size, partial=not is_train),
     ])
-
     dataset = wds.DataPipeline(*pipeline)
     if is_train:
         if not resampled:
@@ -532,15 +549,15 @@ def my_collate(batch):
 def get_csv_dataset(args, preprocess_fn, is_train, epoch=0):
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
-    if args.csv_filter != "":
+    if args.ds_filter != "":
         var_names = globals()
-        args.csv_filter = var_names[args.csv_filter]
+        args.ds_filter = var_names[args.ds_filter]
     dataset = CsvDataset(
         input_filename,
         preprocess_fn,
         img_key=args.csv_img_key,
         caption_key=args.csv_caption_key,
-        csvfilter=args.csv_filter,
+        csvfilter=args.ds_filter,
         csvscrambled=args.csv_scrambled,
         csvcleaned=args.csv_cleaned,
         sep=args.csv_separator)
